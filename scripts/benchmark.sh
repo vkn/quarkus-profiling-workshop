@@ -70,7 +70,7 @@ Help()
    echo "p    if specified, run perf stat together with the selected profiler. Only GNU Linux."
 }
 
-while getopts "hu:e:f::d::mjt::r::c:p" option; do
+while getopts "hu:e::f::d::mjt::r::c:p" option; do
    case $option in
       h) Help
          exit;;

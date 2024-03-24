@@ -13,6 +13,8 @@ FORMAT=html
 
 JFR=false
 
+JFRSYNC=false
+
 THREADS=2
 
 RATE=0
@@ -53,6 +55,8 @@ Help()
    echo ""
    echo "j    if specified, it uses JFR profiling. async-profiler otherwise."
    echo ""
+   echo "m    if specified, it uses JFR profiling with async-profiler using --jfrsync option."
+   echo ""
    echo "t    number of I/O threads of the quarkus application."
    echo ""
    echo "     default is 1"
@@ -66,7 +70,7 @@ Help()
    echo "p    if specified, run perf stat together with the selected profiler. Only GNU Linux."
 }
 
-while getopts "hu::e::f::d::jt::r::c:p" option; do
+while getopts "hu:e:f::d::mjt::r::c:p" option; do
    case $option in
       h) Help
          exit;;
@@ -79,6 +83,8 @@ while getopts "hu::e::f::d::jt::r::c:p" option; do
       d) DURATION=${OPTARG}
          ;;
       j) JFR=true
+         ;;
+      m) JFRSYNC=true
          ;;
       t) THREADS=${OPTARG}
          ;;
@@ -154,8 +160,15 @@ else
      echo "----- Starting async-profiler on load generator process ($wrk_jvm_pid)"
      java -jar ap-loader-all.jar profiler -e ${EVENT} -t -d ${PROFILING} -f wrk_${NOW}_${EVENT}.${FORMAT} $wrk_jvm_pid &
   fi
-  echo "----- Starting async-profiler on quarkus application ($quarkus_pid)"
-  java -jar ap-loader-all.jar profiler -e ${EVENT} -t -d ${PROFILING} -f ${NOW}_${EVENT}.${FORMAT} $quarkus_pid &
+  if [ "${JFRSYNC}" = true ]
+  then
+    echo "----- Starting async-profiler cpu,alloc,lock combined with JFR on quarkus application ($quarkus_pid)"
+    java -jar ap-loader-all.jar profiler -e cpu -e alloc -e lock --jfrsync profile -d ${PROFILING} -f ${NOW}_jfrsync.jfr $quarkus_pid &
+
+  else
+    echo "----- Starting async-profiler on quarkus application ($quarkus_pid)"
+    java -jar ap-loader-all.jar profiler -e ${EVENT} -t -d ${PROFILING} -f ${NOW}_${EVENT}.${FORMAT} $quarkus_pid &
+  fi
 fi
 
 ap_pid=$!
